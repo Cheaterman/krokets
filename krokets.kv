@@ -1,0 +1,45 @@
+#:import Vector kivy.vector.Vector
+
+
+FloatLayout:
+    Label:
+        text: 'Krokets!'
+        font_size: sp(28)
+
+    Label:
+        text: 'Frame count: {}'.format(app.frame_count)
+        pos_hint: {'x': 0, 'top': 1}
+        size_hint: None, None
+        size: self.texture_size
+        font_size: sp(24)
+
+    Widget:
+        id: target
+        pos_hint: {'center': (.5, .75)}
+        size_hint: None, None
+        size: 32, 32
+
+        canvas:
+            Color:
+                rgb: .2, 1, .3
+            Ellipse:
+                pos: self.pos
+                size: self.size
+
+
+<Rocket>:
+    size_hint: None, None
+    size: 5, 25
+    heading: Vector(self.velocity).angle((0, 1))
+
+    canvas:
+        PushMatrix:
+        Rotate:
+            origin: self.center
+            angle: self.heading or 0
+        Color:
+            a: .25
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        PopMatrix:
