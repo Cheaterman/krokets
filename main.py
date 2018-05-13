@@ -10,7 +10,9 @@ import random
 
 
 POOL_SIZE = 30
-GENOME_SIZE = 200
+GENOME_SIZE = 400
+MAX_ACCELERATION = .5
+MAX_SPEED = 5
 
 
 class Krokets(App):
@@ -18,6 +20,7 @@ class Krokets(App):
 
     def build(self):
         self.target = self.root.ids.target
+        self.obstacle = self.root.ids.obstacle
         Clock.schedule_interval(self.update, 0)
         self.reset()
 
@@ -91,10 +94,14 @@ class Population:
             self.mating_pool.append(self.rockets[selected].dna)
             print('Picked %d (%f)' % (selected, self.rockets[selected].fitness))
 
+        mutation_rate = .1 if not all(
+            rocket.crashed for rocket in self.rockets
+        ) else .5
+        print('Mutation rate: %f' % mutation_rate)
         self.reset()
-        self.natural_selection()
+        self.natural_selection(mutation_rate)
 
-    def natural_selection(self):
+    def natural_selection(self, mutation_rate):
         mother, father = (random.choice(self.mating_pool) for _ in 'mf')
 
         for _ in range(POOL_SIZE):
@@ -103,7 +110,7 @@ class Population:
                 center_x=app.root.center_x,
                 center_y=app.root.height * .25,
             )
-            rocket.dna.mutate(.1)
+            rocket.dna.mutate(mutation_rate)
             self.rockets.append(rocket)
             app.root.add_widget(rocket)
 
@@ -120,6 +127,7 @@ class Rocket(Widget):
             self.dna = dna
 
         self.completed = False
+        self.crashed = False
 
     def apply_force(self, force):
         self.acceleration = force + self.acceleration
@@ -127,17 +135,30 @@ class Rocket(Widget):
     def update(self):
         distance = Vector(self.center).distance(app.target.center)
 
-        if distance < app.target.width:
+        if distance < app.target.width / 2.:
             self.completed = True
             self.center = app.target.center
 
-        if self.completed:
+        if(
+            (
+                app.obstacle.x < self.center_x < app.obstacle.right and
+                app.obstacle.y < self.center_y < app.obstacle.top
+            ) or (
+                self.center_x < 0 or self.center_x > app.root.width or
+                self.center_y < 0 or self.center_y > app.root.height
+            )
+        ):
+            self.crashed = True
+
+        if self.completed or self.crashed:
             return
 
         if app.frame_count < GENOME_SIZE:
             self.apply_force(self.dna.genes[app.frame_count])
 
         self.velocity = Vector(self.velocity) + self.acceleration
+        if Vector(self.velocity).length() > MAX_SPEED:
+            self.velocity = Vector(self.velocity).normalize() * MAX_SPEED
         self.pos = Vector(self.velocity) + self.pos
         self.acceleration = [0, 0]
 
@@ -149,6 +170,9 @@ class Rocket(Widget):
         if self.completed:
             self.fitness *= 5
 
+        if self.crashed:
+            self.fitness *= .2
+
 
 class DNA:
     def __init__(self, genome=None):
@@ -158,7 +182,11 @@ class DNA:
             self.genes = []
             for _ in range(GENOME_SIZE):
                 self.genes.append(
-                    Vector((random.random() * .5 - .25 for _ in 'xy'))
+                    Vector((
+                        random.random() * 2 * MAX_ACCELERATION
+                        - MAX_ACCELERATION
+                        for _ in 'xy'
+                    ))
                 )
 
     def __iter__(self):
@@ -188,8 +216,8 @@ class DNA:
         for index, gene in enumerate(self.genes[:]):
             if random.random() < rate:
                 self.genes[index] = Vector((
-                    gene.x + random.gauss(0, .05),
-                    gene.y + random.gauss(0, .05),
+                    gene.x + random.gauss(0, .2 * MAX_ACCELERATION),
+                    gene.y + random.gauss(0, .2 * MAX_ACCELERATION),
                 ))
 
 

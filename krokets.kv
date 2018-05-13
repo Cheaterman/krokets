@@ -26,6 +26,17 @@ FloatLayout:
                 pos: self.pos
                 size: self.size
 
+    Widget:
+        id: obstacle
+        pos_hint: {'center': (.5, .5)}
+        size_hint: .5, .1
+
+        canvas:
+            Color:
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
 
 <Rocket>:
     size_hint: None, None
