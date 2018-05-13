@@ -103,6 +103,7 @@ class Population:
                 center_x=app.root.center_x,
                 center_y=app.root.height * .25,
             )
+            rocket.dna.mutate(.1)
             self.rockets.append(rocket)
             app.root.add_widget(rocket)
 
@@ -184,7 +185,12 @@ class DNA:
         return DNA(genome)
 
     def mutate(self, rate):
-        pass  # TODO: WIP
+        for index, gene in enumerate(self.genes[:]):
+            if random.random() < rate:
+                self.genes[index] = Vector((
+                    gene.x + random.gauss(0, .05),
+                    gene.y + random.gauss(0, .05),
+                ))
 
 
 app = Krokets()
